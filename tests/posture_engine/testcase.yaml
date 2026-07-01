@@ -1,0 +1,6 @@
+tests:
+  wpd.posture_engine:
+    platform_allow: qemu_cortex_m3
+    tags: posture_engine
+    integration_platforms:
+      - qemu_cortex_m3

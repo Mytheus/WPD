@@ -48,7 +48,7 @@ WPD/
 │       └── logging/            # listener transversal de chan_system_status (Etapa 10)
 ├── drivers/sensor/            # Driver I2C do IMU, out-of-tree — aguardando escolha do sensor (ADR 0002)
 ├── include/wpd/               # Headers públicos compartilhados (structs de payload dos canais ZBus, Etapa 3)
-├── tests/                     # Ztest + testcase.yaml para Twister (Etapa 11)
+├── tests/                     # Ztest + testcase.yaml para Twister (Etapa 11; posture_engine/ implementado)
 └── scripts/                   # Helpers de build/CI
 ```
 
@@ -201,12 +201,35 @@ ou, usando o wrapper:
 > primeira, sem warnings.
 >
 > FLASH 4,01% (82 696 B de 2 064 128 B), RAM 5,72% (15 464 B de 264 KB).
+>
+> **Build validado (2026-07-01) — Etapa 11**: `tests/posture_engine/` — 6/6 casos
+> passando, reusando o `posture_engine.c`/`zbus_channels.c` reais (não mocks). Dois
+> problemas de ambiente encontrados e documentados (não são bugs do firmware):
+> `native_sim` não builda aqui (sem toolchain host/gcc instalado, só o cruzado ARM) —
+> troquei para `qemu_cortex_m3`, que roda com o mesmo toolchain ARM via QEMU (já incluso
+> no Zephyr SDK) e atende ao mesmo objetivo da RNF06; `qemu_cortex_m0` (mais parecido
+> com o RP2040 real) foi tentado primeiro, mas `k_sleep()` trava indefinidamente nesse
+> board/máquina QEMU nesta versão do QEMU deste ambiente — confirmado isolando o
+> problema num teste mínimo antes de suspeitar do código. Também encontrei e corrigi um
+> bug real no meu próprio teste (não no firmware): o filtro EMA de `posture_engine`
+> parte de 0 a cada `before_fn`, então uma única amostra "ruim" não basta para cruzar o
+> limiar — precisa de várias, do mesmo jeito que o retorno a GOOD já precisava. Twister
+> no Windows também precisa de `--outdir` curto (fora da árvore do projeto) por causa do
+> limite de 260 caracteres de caminho.
+>
+> Só `posture_engine/` foi implementado (a lógica de negócio pura mais valiosa, RNF06);
+> `button`/`notification`/`settings`/`shell`/`zbus_channels` ficam como evolução futura
+> — cada um exigiria seu próprio overlay/emulador (GPIO, Input, PWM), fora do escopo
+> desta entrega.
 
 ## Como testar (a partir da Etapa 11)
 
 ```powershell
-west twister -p native_sim -T tests/
+west twister -p qemu_cortex_m3 -T tests/posture_engine --outdir <caminho curto>
 ```
+
+Veja [`tests/posture_engine/README.md`](tests/posture_engine/README.md) para o porquê
+da plataforma e do `--outdir`.
 
 ## Como flashear
 
@@ -230,6 +253,6 @@ BOOTSEL).
 | 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ✅ |
 | 8 | Shell (`wpd config`/`status`/`force`) | ✅ |
 | 9 | Settings (persistência automática de `chan_config` na NVS) | ✅ |
-| 10 | Logging (`chan_system_status` + `src/logging/`) | ✅ Esta entrega |
-| 11 | Testes (Ztest + Twister) | ⏳ |
+| 10 | Logging (`chan_system_status` + `src/logging/`) | ✅ |
+| 11 | Testes (Ztest + Twister) — `posture_engine` 6/6 ✅, demais como evolução futura | ✅ Esta entrega |
 | 12 | Refatoração | ⏳ |

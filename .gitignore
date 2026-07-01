@@ -3,4 +3,6 @@
 # Artefatos de build do West/Zephyr (gerados localmente, fora de controle de versão)
 build/
 build-*/
+build_*/
+twister-out/
 *.uf2
