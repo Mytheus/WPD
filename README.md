@@ -168,6 +168,16 @@ ou, usando o wrapper:
 > `i2c0` sem módulo dono. Build limpo de primeira, sem warnings.
 >
 > FLASH 3,84% (79 164 B de 2 064 128 B), RAM 5,71% (15 424 B de 264 KB).
+>
+> **Build validado (2026-06-30) — Etapa 8**: grupo de comandos `wpd` no Shell (`config
+> show/threshold/tolerance/reset`, `status`, `force`). Sem comando `save`, de propósito:
+> Settings (Etapa 9) ainda não existe, então persistência real não é possível ainda —
+> `threshold`/`tolerance`/`reset` só atualizam `chan_config` em RAM (`posture_engine` já
+> reage, mas não sobrevive a reboot). Extraí os defaults (15°/30s) para
+> `include/wpd/config.h` como macros compartilhadas entre `zbus_channels.c` e
+> `shell.c`, em vez de duplicar o número em dois arquivos. Build limpo de primeira.
+>
+> FLASH 3,94% (81 248 B de 2 064 128 B), RAM 5,71% (15 424 B de 264 KB).
 
 ## Como testar (a partir da Etapa 11)
 
@@ -194,8 +204,8 @@ BOOTSEL).
 | 4 | Módulos (`button`, `notification`/LED, `posture_engine` esqueleto) | ✅ |
 | 5 | Máquina de estados (posture_engine: filtro, histerese, ack) | ✅ |
 | 6 | Comunicação via ZBus entre módulos (smoke test de pipeline ponta a ponta) | ✅ |
-| 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ✅ Esta entrega |
-| 8 | Shell | ⏳ |
+| 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ✅ |
+| 8 | Shell (`wpd config`/`status`/`force`) | ✅ Esta entrega |
 | 9 | Settings | ⏳ |
 | 10 | Logging | ⏳ |
 | 11 | Testes (Ztest + Twister) | ⏳ |

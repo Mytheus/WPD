@@ -22,4 +22,12 @@ struct wpd_posture_config {
 	uint32_t tolerance_ms;
 };
 
+/* Defaults ergonômicos placeholder (não calibrados contra sensor real, ADR 0002) --
+ * usados tanto no valor inicial de chan_config (src/zbus/zbus_channels.c) quanto no
+ * comando `wpd config reset` (src/modules/shell, Etapa 8), para não duplicar o número
+ * em dois arquivos.
+ */
+#define WPD_CONFIG_DEFAULT_THRESHOLD_MDEG 15000
+#define WPD_CONFIG_DEFAULT_TOLERANCE_MS   30000
+
 #endif /* WPD_CONFIG_H_ */
