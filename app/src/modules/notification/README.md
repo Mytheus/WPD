@@ -1,19 +1,21 @@
 # Módulo `notification`
 
-> Placeholder de diretório — implementação prevista para a **Etapa 4** (módulo) e
-> **Etapa 7 redefinida** (atuador PWM do motor de vibração — ver
-> [ADR 0001](../../../../docs/adr/0001-remove-ble-standalone-device.md)). Nenhum código
-> nesta etapa.
+> Módulo/LED implementados na **Etapa 4** (`notification.c`). O atuador PWM do motor de
+> vibração é a **Etapa 7 redefinida** (ver
+> [ADR 0001](../../../../docs/adr/0001-remove-ble-standalone-device.md)) — ainda não
+> implementado.
 
 ## Objetivo
 
-Traduzir eventos de estado postural em estímulos físicos para o usuário: LED (visual) e
-motor de vibração via PWM (tátil).
+Traduzir eventos de estado postural em estímulos físicos para o usuário: LED (visual,
+implementado) e motor de vibração via PWM (tátil, Etapa 7).
 
 ## Responsabilidade
 
 Reagir a `chan_posture_state` e acionar os atuadores. Não decide política de postura —
-apenas traduz estado em estímulo.
+apenas traduz estado em estímulo. Mapeamento atual: GOOD/BAD → LED apagado; ALERTING →
+LED aceso (RF05 notifica quando o tempo incorreto *excede* o limite — isto é, na
+transição para ALERTING, não para BAD).
 
 ## Dependências
 
@@ -28,8 +30,10 @@ LED/PWM não bloqueia, conforme Diagrama Extra "Arquitetura ZBus").
 
 ## Como testar
 
-Ztest com fake/emulated GPIO+PWM em `tests/notification/` (Etapa 11); validação manual em
-hardware via comando Shell de "forçar evento" (Etapa 8).
+Hoje: publicar manualmente em `chan_posture_state` (ainda sem produtor real —
+`posture_engine` só publica a partir da Etapa 5) e observar `led0`. Ztest com
+fake/emulated GPIO+PWM em `tests/notification/` (Etapa 11); validação manual em hardware
+via comando Shell de "forçar evento" (Etapa 8).
 
 ## Possíveis evoluções
 

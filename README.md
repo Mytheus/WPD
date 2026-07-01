@@ -42,9 +42,10 @@ WPD/
 │   │   └── rpi_pico.overlay
 │   └── src/
 │       ├── main.c
-│       ├── modules/           # posture_engine, notification, settings, shell, button, app_main
+│       ├── modules/           # button, notification (Etapa 4); posture_engine (esqueleto, Etapa 4);
+│       │                      # settings (Etapa 9), shell (Etapa 8), app_main (vive em main.c)
 │       └── zbus/               # zbus_channels.h/.c (canais centralizados, implementado na Etapa 3)
-├── drivers/sensor/            # Driver I2C do IMU, out-of-tree (Etapa 4, ADR 0002)
+├── drivers/sensor/            # Driver I2C do IMU, out-of-tree — aguardando escolha do sensor (ADR 0002)
 ├── include/wpd/               # Headers públicos compartilhados (structs de payload dos canais ZBus, Etapa 3)
 ├── tests/                     # Ztest + testcase.yaml para Twister (Etapa 11)
 └── scripts/                   # Helpers de build/CI
@@ -129,6 +130,15 @@ ou, usando o wrapper:
 >   `zephyr/samples/subsys/zbus/hello_world/`.
 >
 > FLASH 3,71% (76 552 B de 2 064 128 B), RAM 5,65% (15 272 B de 264 KB).
+>
+> **Build validado (2026-06-30) — Etapa 4**: primeiros três módulos (`button`,
+> `notification`, `posture_engine`) compilaram e linkaram de primeira, incluindo a
+> referência cross-arquivo aos observers ZBus por nome (`ZBUS_OBSERVERS(...)` em
+> `zbus_channels.c` apontando para listeners definidos em outro `.c` via
+> `ZBUS_LISTENER_DEFINE` — o mesmo mecanismo dos samples oficiais de zbus). `main.c`
+> devolveu a posse de `buttons`/`led0` para os módulos correspondentes.
+>
+> FLASH 3,74% (77 224 B de 2 064 128 B), RAM 5,67% (15 328 B de 264 KB).
 
 ## Como testar (a partir da Etapa 11)
 
@@ -151,10 +161,10 @@ BOOTSEL).
 |---|---|---|
 | 1 | Árvore do projeto | ✅ |
 | 2 | Infraestrutura (Logging, Shell, Settings, GPIO, Threads, Timers, Workqueues) | ✅ |
-| 3 | Canais ZBus | ✅ Esta entrega |
-| 4 | Módulos | ⏳ |
-| 5 | Máquina de estados | ⏳ |
-| 6 | Comunicação via ZBus entre módulos | ⏳ |
+| 3 | Canais ZBus | ✅ |
+| 4 | Módulos (`button`, `notification`/LED, `posture_engine` esqueleto) | ✅ Esta entrega |
+| 5 | Máquina de estados (posture_engine: ângulo, filtro, histerese) | ⏳ |
+| 6 | Comunicação via ZBus entre módulos | ⏳ (parcialmente antecipada na Etapa 4) |
 | 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ⏳ |
 | 8 | Shell | ⏳ |
 | 9 | Settings | ⏳ |

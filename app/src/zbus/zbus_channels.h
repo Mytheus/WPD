@@ -15,10 +15,12 @@
  * Como testar: west build -b rpi_pico app (este header não tem lógica própria para
  * testar isoladamente); tests/zbus_channels/ (Etapa 11) testa o fan-out real.
  *
- * Possíveis evoluções: nenhum observer é registrado estaticamente aqui ainda — os
- * módulos (Etapa 4) se registram como listener/subscriber de cada canal na Etapa 6
- * ("Comunicação via ZBus entre módulos"), via `ZBUS_LISTENER_DEFINE`/
- * `ZBUS_SUBSCRIBER_DEFINE` + `ZBUS_CHAN_ADD_OBS`, sem precisar editar este arquivo.
+ * Possíveis evoluções: a partir da Etapa 4, os módulos existentes (button, notification,
+ * posture_engine) já aparecem na lista de observers de `ZBUS_CHAN_DEFINE` em
+ * zbus_channels.c — cada um declarado via `ZBUS_LISTENER_DEFINE` no seu próprio arquivo.
+ * `chan_system_status` continua com `ZBUS_OBSERVERS_EMPTY` até o listener de logging
+ * transversal (Etapa 10). Observers dinâmicos (`zbus_chan_add_obs`) para módulos
+ * plugáveis futuros continuam possíveis sem editar este arquivo.
  */
 
 #ifndef WPD_ZBUS_CHANNELS_H_

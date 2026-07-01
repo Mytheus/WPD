@@ -1,22 +1,26 @@
 # Módulo `button`
 
-> Placeholder de diretório — implementação prevista para a **Etapa 4**. Nenhum código
-> nesta etapa.
+> Implementado na **Etapa 4** (`button.c`).
 
 ## Objetivo
 
-Tratar a entrada do usuário via botão físico (ack/reset/troca de modo), com debounce.
+Tratar a entrada do usuário via botão físico (ack/reset/troca de modo), distinguindo
+pressão curta de longa.
 
 ## Responsabilidade
 
-Detectar curta/longa pressão. A ISR do GPIO nunca manipula estado complexo nem acessa
-ZBus diretamente — apenas submete trabalho à `sys_work_q` (ver Diagrama 3 — Organigrama,
-"ISR nunca acessa diretamente recursos do ZBus ou Settings").
+Detectar curta/longa pressão. O debounce *mecânico* (ruído elétrico do contato) já é
+feito pelo driver `gpio-keys` (`CONFIG_INPUT_GPIO_KEYS`, propriedade
+`debounce-interval-ms` no devicetree) — este módulo só mede, com `k_uptime_get()`, a
+duração entre os eventos de pressionar/soltar reportados pelo subsistema de Input, para
+decidir SHORT_PRESS vs LONG_PRESS (limiar: 800 ms). Como o callback roda no contexto do
+subsistema de Input (não em ISR), publicar diretamente em ZBus é seguro (Diagrama 3 —
+Organigrama, "ISR nunca acessa diretamente recursos do ZBus" — aqui não estamos em ISR).
 
 ## Dependências
 
-- Devicetree: `ack-button` (gpio-keys), ver `app/boards/rpi_pico.overlay`.
-- `k_timer` de debounce.
+- Devicetree: `buttons`/`ack-button` (gpio-keys), ver `app/boards/rpi_pico.overlay`.
+- Subsistema de Input do Zephyr (`zephyr/input/input.h`, `CONFIG_INPUT`).
 - `src/zbus/zbus_channels.h` (canal `chan_button_event`).
 
 ## Quem publica
@@ -25,11 +29,15 @@ Publica em `chan_button_event` (`SHORT_PRESS` / `LONG_PRESS`) após debounce val
 
 ## Quem consome
 
-Nenhum (apenas publica); `posture_engine` e `shell_module` subscrevem.
+Nenhum (apenas publica); `posture_engine` já observa (Etapa 4 — hoje só loga
+recebimento; Etapa 5 decide o que fazer com o ack); `shell_module` observará a partir da
+Etapa 8.
 
 ## Como testar
 
-Ztest simulando GPIO IRQ via `native_sim` + emulador de GPIO (`tests/button/`, Etapa 11).
+Pressionar o botão físico (GP14) — o log deste módulo mostra SHORT_PRESS/LONG_PRESS e a
+duração medida. Ztest simulando eventos de Input via `native_sim`
+(`tests/button/`, Etapa 11).
 
 ## Possíveis evoluções
 

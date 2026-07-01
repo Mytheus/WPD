@@ -13,8 +13,8 @@
 # Como testar: west build -b rpi_pico app && west build -t menuconfig (inspecionar
 # símbolos resolvidos).
 #
-# Possíveis evoluções: a partir da Etapa 4, este arquivo passará a incluir
-# `add_subdirectory(src/modules/...)` para cada módulo conforme for implementado. Nunca
+# Possíveis evoluções: os módulos ainda não criados (settings — Etapa 9, shell — Etapa 8)
+# ganharão seu próprio `add_subdirectory(src/modules/...)` quando implementados. Nunca
 # adicionar um subdiretório aqui antes de a etapa correspondente estar concluída.
 
 cmake_minimum_required(VERSION 3.20.0)
@@ -23,6 +23,9 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(wpd_wearable_postura)
 
 add_subdirectory(src/zbus)
+add_subdirectory(src/modules/button)
+add_subdirectory(src/modules/notification)
+add_subdirectory(src/modules/posture_engine)
 
 target_sources(app PRIVATE src/main.c)
 
