@@ -148,6 +148,17 @@ ou, usando o wrapper:
 > só um warning de comentário (`/*` dentro de comentário, mesmo padrão da Etapa 3).
 >
 > FLASH 3,79% (78 168 B de 2 064 128 B), RAM 5,71% (15 424 B de 264 KB).
+>
+> **Build validado (2026-06-30) — Etapa 6**: a maior parte da "comunicação via ZBus
+> entre módulos" já tinha sido feita nas Etapas 4/5 (observers reais registrados). O que
+> restava genuinamente para esta etapa era provar a cadeia completa de ponta a ponta —
+> `main.c` agora publica amostras sintéticas em `chan_sensor_data` no boot (não há sensor
+> real ainda, ADR 0002) e confirma, via `chan_posture_state`, que `posture_engine` e
+> `notification` reagiram em cadeia: GOOD -> BAD (30°, acima do limiar) -> GOOD de novo
+> (várias amostras a 0°, até o filtro assentar — uma característica real do filtro EMA,
+> não um bug). Sem erros; build limpo de primeira.
+>
+> FLASH 3,81% (78 736 B de 2 064 128 B), RAM 5,71% (15 424 B de 264 KB).
 
 ## Como testar (a partir da Etapa 11)
 
@@ -172,8 +183,8 @@ BOOTSEL).
 | 2 | Infraestrutura (Logging, Shell, Settings, GPIO, Threads, Timers, Workqueues) | ✅ |
 | 3 | Canais ZBus | ✅ |
 | 4 | Módulos (`button`, `notification`/LED, `posture_engine` esqueleto) | ✅ |
-| 5 | Máquina de estados (posture_engine: filtro, histerese, ack) | ✅ Esta entrega |
-| 6 | Comunicação via ZBus entre módulos | ⏳ (parcialmente antecipada nas Etapas 4/5) |
+| 5 | Máquina de estados (posture_engine: filtro, histerese, ack) | ✅ |
+| 6 | Comunicação via ZBus entre módulos (smoke test de pipeline ponta a ponta) | ✅ Esta entrega |
 | 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ⏳ |
 | 8 | Shell | ⏳ |
 | 9 | Settings | ⏳ |

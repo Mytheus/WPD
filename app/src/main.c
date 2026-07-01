@@ -1,16 +1,20 @@
 /*
  * Objetivo: ponto de entrada do firmware.
  *
- * Nesta etapa (4 — módulos), main() perde a posse de `buttons`/`led0` para os módulos
- * `button`/`notification` (que agora fazem seu próprio bring-up: `button` via
- * `INPUT_CALLBACK_DEFINE`, `notification` via `SYS_INIT`) e mantém apenas os checks de
- * hardware que ainda não têm um módulo dono: `i2c0` (IMU, ADR 0002, sensor não
- * escolhido) e `pwm` (motor de vibração, Etapa 7). Isso segue a decisão arquitetural do
- * Diagrama 3 (Organigrama): "main() atua apenas como orquestrador de boot, não contém
- * lógica de negócio" — à medida que um módulo passa a existir, main() devolve a ele a
- * responsabilidade sobre o hardware correspondente, em vez de acumular checks.
+ * Nesta etapa (6 — comunicação via ZBus entre módulos), main() adiciona um smoke test
+ * de integração de ponta a ponta: publica uma amostra sintética "ruim" em
+ * `chan_sensor_data` (não há sensor real ainda — ADR 0002) e confirma, lendo
+ * `chan_posture_state`, que a cadeia completa reagiu: `posture_engine` filtrou/decidiu
+ * GOOD->BAD e `notification` (listener síncrono, já executado quando `zbus_chan_pub`
+ * retorna) acionou o LED. Em seguida publica uma amostra "boa" para voltar a GOOD e
+ * cancelar o timer de histerese armado pela amostra sintética — sem isso, o sistema
+ * "alertaria" sozinho ~30s após o boot por causa do próprio teste, o que seria um efeito
+ * colateral confuso para quem for validar o hardware depois. Isso ainda é só prova de
+ * mecanismo (Diagrama 3: "main() não contém lógica de negócio") — não é uma decisão de
+ * postura de verdade.
  *
- * Responsabilidade: orquestração de boot; bring-up do que ainda não tem módulo dono.
+ * Responsabilidade: orquestração de boot; bring-up do que ainda não tem módulo dono
+ * (`i2c0`, `pwm`); smoke test de integração entre os módulos já existentes.
  * Dependências: Logging, Settings (zephyr/settings/settings.h), Device Model
  * (zephyr/device.h), ZBus (src/zbus/zbus_channels.h).
  * Quem chama: o kernel Zephyr, após a inicialização dos drivers via SYS_INIT.
@@ -18,14 +22,17 @@
  *
  * Como testar: west build -b rpi_pico app && flashar via UF2/picotool; abrir um
  * terminal serial na UART0 (115200 8N1) e confirmar, na ordem: mensagem de boot, status
- * "ready" de i2c0/pwm, resultado do settings_load() e o resultado do smoke test de
- * publish+read de `chan_system_status`. Pressionar o botão físico deve gerar log do
- * módulo `button` seguido do módulo `posture_engine` (via `chan_button_event`).
+ * "ready" de i2c0/pwm, resultado do settings_load(), smoke test de `chan_system_status`
+ * e o smoke test de pipeline (deve terminar em GOOD, sem erro). Pressionar o botão
+ * físico deve gerar log do módulo `button` seguido do módulo `posture_engine`.
  *
  * Possíveis evoluções: quando o driver do IMU existir (ADR 0002) e o atuador PWM for
- * implementado (Etapa 7), os checks de `i2c0`/`pwm` também migram para seus módulos e
- * main() fica só com Settings + o smoke test de ZBus.
+ * implementado (Etapa 7), os checks de `i2c0`/`pwm` também migram para seus módulos; o
+ * smoke test de pipeline sintético pode ser removido nessa hora (ou mantido como
+ * self-test de boot, a decidir).
  */
+
+#include <stdbool.h>
 
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
@@ -71,9 +78,74 @@ static void zbus_smoke_test(void)
 	LOG_INF("zbus: smoke test OK (publish+read em chan_system_status)");
 }
 
+/* Publica uma amostra sintética em chan_sensor_data e devolve o estado postural
+ * resultante (lido de chan_posture_state). Retorna false só em erro de zbus -- não
+ * julga se o estado lido é o esperado (isso é responsabilidade de quem chama).
+ */
+static bool publish_sample(int32_t angle_mdeg, enum wpd_posture_state *state_out)
+{
+	struct wpd_sensor_sample sample = { .angle_mdeg = angle_mdeg };
+	struct wpd_posture_state_msg state;
+	int rc;
+
+	rc = zbus_chan_pub(&chan_sensor_data, &sample, K_MSEC(100));
+	if (rc != 0) {
+		LOG_ERR("pipeline: falha ao publicar chan_sensor_data (rc=%d)", rc);
+		return false;
+	}
+
+	rc = zbus_chan_read(&chan_posture_state, &state, K_MSEC(100));
+	if (rc != 0) {
+		LOG_ERR("pipeline: falha ao ler chan_posture_state (rc=%d)", rc);
+		return false;
+	}
+
+	*state_out = state.state;
+	return true;
+}
+
+static void posture_pipeline_smoke_test(void)
+{
+	enum wpd_posture_state state;
+
+	/* 30 graus: acima do limiar default de 15 graus (chan_config) -> deve virar BAD
+	 * já na primeira amostra (o filtro em posture_engine inicializa direto no valor
+	 * da primeira leitura, sem suavizar).
+	 */
+	if (!publish_sample(30000, &state) || state != WPD_POSTURE_BAD) {
+		LOG_ERR("pipeline: esperava BAD apos amostra de 30000 mdeg, obteve %d", state);
+		return;
+	}
+
+	/* Volta a 0 grau -- mas o filtro de posture_engine é uma média móvel exponencial
+	 * (retém ~75% do valor anterior a cada amostra), então uma única amostra "boa"
+	 * não é suficiente para o ângulo filtrado cruzar de volta o limiar. Publicamos
+	 * algumas amostras seguidas até o filtro assentar (sem julgar as intermediárias
+	 * como erro), e só então checamos GOOD -- isso também cancela o timer de
+	 * histerese armado pela amostra ruim acima (sem isso, o sistema "alertaria"
+	 * sozinho ~30s depois, sem ninguém ter testado nada).
+	 */
+	for (int i = 0; i < 6; i++) {
+		if (!publish_sample(0, &state)) {
+			return;
+		}
+		if (state == WPD_POSTURE_GOOD) {
+			break;
+		}
+	}
+
+	if (state != WPD_POSTURE_GOOD) {
+		LOG_ERR("pipeline: angulo filtrado nao assentou em GOOD apos 6 amostras");
+		return;
+	}
+
+	LOG_INF("pipeline sensor->posture_engine->notification OK "
+		"(GOOD->BAD->GOOD via amostras sinteticas)");
+}
+
 int main(void)
 {
-	LOG_INF("Wearable de Correcao de Postura - boot OK (Etapa 4: modulos)");
+	LOG_INF("Wearable de Correcao de Postura - boot OK (Etapa 6: comunicacao zbus)");
 
 	check_device_ready(i2c0_dev, "i2c0");
 	check_device_ready(pwm_dev, "pwm");
@@ -89,6 +161,7 @@ int main(void)
 	}
 
 	zbus_smoke_test();
+	posture_pipeline_smoke_test();
 
 	return 0;
 }
