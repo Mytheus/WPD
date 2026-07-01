@@ -1,6 +1,7 @@
 # Módulo `shell`
 
-> Implementado na **Etapa 8** (`shell.c`), grupo de comandos `wpd`.
+> Implementado na **Etapa 8** (`shell.c`), grupo de comandos `wpd`; `force-status`
+> adicionado na Etapa 10.
 
 ## Objetivo
 
@@ -18,6 +19,7 @@ configuração.
 | `wpd config reset` | Restaura os defaults (`include/wpd/config.h`). |
 | `wpd status` | Mostra o estado postural atual (`chan_posture_state`). |
 | `wpd force <good\|bad\|alerting>` | Publica `chan_posture_state` direto, bypassando `posture_engine` — só para diagnóstico de `notification` (LED/PWM) sem sensor real. |
+| `wpd force-status <ok\|fault>` | Publica `chan_system_status` direto — só para diagnóstico do listener de logging transversal (`src/logging/`), sem sensor real para gerar um `SENSOR_FAULT` de verdade. |
 
 ## Responsabilidade
 
@@ -38,7 +40,7 @@ não é mais necessário) um comando `save`.
 ## Quem publica
 
 `chan_config` (`threshold`/`tolerance`/`reset`); `chan_posture_state` (`force`, só para
-diagnóstico).
+diagnóstico); `chan_system_status` (`force-status`, só para diagnóstico).
 
 ## Quem consome
 

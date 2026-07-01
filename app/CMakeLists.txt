@@ -13,8 +13,9 @@
 # Como testar: west build -b rpi_pico app && west build -t menuconfig (inspecionar
 # símbolos resolvidos).
 #
-# Possíveis evoluções: nenhum módulo pendente de add_subdirectory — todos os previstos
-# em docs/ARCHITECTURE.md (Seção 6) existem a partir da Etapa 9.
+# Possíveis evoluções: nenhum módulo/infra pendente de add_subdirectory — tudo previsto
+# em docs/ARCHITECTURE.md (Seção 6, Diagrama Extra "Arquitetura ZBus") existe a partir
+# da Etapa 10.
 
 cmake_minimum_required(VERSION 3.20.0)
 
@@ -22,6 +23,7 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(wpd_wearable_postura)
 
 add_subdirectory(src/zbus)
+add_subdirectory(src/logging)
 add_subdirectory(src/modules/button)
 add_subdirectory(src/modules/notification)
 add_subdirectory(src/modules/posture_engine)

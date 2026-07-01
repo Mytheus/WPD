@@ -42,9 +42,10 @@ WPD/
 │   │   └── rpi_pico.overlay
 │   └── src/
 │       ├── main.c
-│       ├── modules/           # button, notification (Etapa 4); posture_engine (esqueleto, Etapa 4);
-│       │                      # settings (Etapa 9), shell (Etapa 8), app_main (vive em main.c)
-│       └── zbus/               # zbus_channels.h/.c (canais centralizados, implementado na Etapa 3)
+│       ├── modules/           # button, notification, posture_engine, shell, settings
+│       │                      # (todos implementados; app_main vive em main.c)
+│       ├── zbus/               # zbus_channels.h/.c (canais centralizados, Etapa 3)
+│       └── logging/            # listener transversal de chan_system_status (Etapa 10)
 ├── drivers/sensor/            # Driver I2C do IMU, out-of-tree — aguardando escolha do sensor (ADR 0002)
 ├── include/wpd/               # Headers públicos compartilhados (structs de payload dos canais ZBus, Etapa 3)
 ├── tests/                     # Ztest + testcase.yaml para Twister (Etapa 11)
@@ -189,6 +190,17 @@ ou, usando o wrapper:
 > primeira (só o mesmo warning de comentário recorrente, já corrigido).
 >
 > FLASH 3,98% (82 104 B de 2 064 128 B), RAM 5,71% (15 448 B de 264 KB).
+>
+> **Build validado (2026-07-01) — Etapa 10**: `chan_system_status` ganhou seu observer
+> (`system_status_logger_lis`, novo diretório `src/logging/` — separado de
+> `src/modules/` porque a Seção 6 classifica logging como infra, não módulo de negócio).
+> Adicionei `wpd force-status <ok|fault>` no Shell, no mesmo padrão do `wpd force` já
+> existente, para poder exercitar o listener sem sensor real. Nenhum publisher real de
+> `SENSOR_FAULT` existe ainda — sem sensor escolhido (ADR 0002), não há uma condição de
+> falha real para detectar; isso fica documentado como evolução futura. Build limpo de
+> primeira, sem warnings.
+>
+> FLASH 4,01% (82 696 B de 2 064 128 B), RAM 5,72% (15 464 B de 264 KB).
 
 ## Como testar (a partir da Etapa 11)
 
@@ -217,7 +229,7 @@ BOOTSEL).
 | 6 | Comunicação via ZBus entre módulos (smoke test de pipeline ponta a ponta) | ✅ |
 | 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ✅ |
 | 8 | Shell (`wpd config`/`status`/`force`) | ✅ |
-| 9 | Settings (persistência automática de `chan_config` na NVS) | ✅ Esta entrega |
-| 10 | Logging | ⏳ |
+| 9 | Settings (persistência automática de `chan_config` na NVS) | ✅ |
+| 10 | Logging (`chan_system_status` + `src/logging/`) | ✅ Esta entrega |
 | 11 | Testes (Ztest + Twister) | ⏳ |
 | 12 | Refatoração | ⏳ |

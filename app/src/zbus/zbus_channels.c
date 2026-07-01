@@ -8,8 +8,8 @@
  * `posture_engine_*_lis`) são declarados via `ZBUS_LISTENER_DEFINE` nos próprios
  * arquivos dos módulos — não precisam ser incluídos aqui: `ZBUS_CHAN_DEFINE` já gera a
  * `extern` necessária a partir do nome (mesmo mecanismo usado pelos exemplos oficiais em
- * zephyr/samples/subsys/zbus/). `chan_system_status` permanece sem observer: o listener
- * de logging transversal é Etapa 10.
+ * zephyr/samples/subsys/zbus/). `chan_system_status` ganhou seu observer na Etapa 10
+ * (`system_status_logger_lis`, src/logging/system_status_logger.c).
  * Dependências: zbus_channels.h.
  * Quem utiliza: ninguém diretamente (é o arquivo de definição); consumido via
  * zbus_channels.h.
@@ -64,5 +64,5 @@ ZBUS_CHAN_DEFINE(chan_system_status,
 		  struct wpd_system_status_msg,
 		  NULL,
 		  NULL,
-		  ZBUS_OBSERVERS_EMPTY,
+		  ZBUS_OBSERVERS(system_status_logger_lis),
 		  ZBUS_MSG_INIT(.status = WPD_SYSTEM_STATUS_OK));

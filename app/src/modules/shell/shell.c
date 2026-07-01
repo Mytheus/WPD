@@ -15,6 +15,10 @@
  *   wpd force <good|bad|alerting>    - publica chan_posture_state diretamente, sem
  *                                       passar por posture_engine (só para diagnóstico
  *                                       de notification/LED/PWM sem sensor real).
+ *   wpd force-status <ok|fault>      - publica chan_system_status diretamente (Etapa
+ *                                       10) - só para diagnóstico do listener de
+ *                                       logging transversal, sem sensor real para gerar
+ *                                       um SENSOR_FAULT de verdade.
  *
  * Nota de escopo (atualizada na Etapa 9): a Seção 9 da arquitetura diz que Shell aciona
  * Settings, que persiste em NVS. Em vez de um comando explícito `save`, `settings`
@@ -45,6 +49,7 @@
 
 #include <wpd/config.h>
 #include <wpd/posture.h>
+#include <wpd/system_status.h>
 
 #include "zbus_channels.h"
 
@@ -54,6 +59,11 @@ static const char *const posture_state_names[] = {
 	[WPD_POSTURE_GOOD] = "GOOD",
 	[WPD_POSTURE_BAD] = "BAD",
 	[WPD_POSTURE_ALERTING] = "ALERTING",
+};
+
+static const char *const system_status_names[] = {
+	[WPD_SYSTEM_STATUS_OK] = "OK",
+	[WPD_SYSTEM_STATUS_SENSOR_FAULT] = "SENSOR_FAULT",
 };
 
 static int read_config(const struct shell *sh, struct wpd_posture_config *cfg)
@@ -222,6 +232,34 @@ static int cmd_force(const struct shell *sh, size_t argc, char **argv)
 	return 0;
 }
 
+static int cmd_force_status(const struct shell *sh, size_t argc, char **argv)
+{
+	ARG_UNUSED(argc);
+
+	enum wpd_system_status status;
+
+	if (strcmp(argv[1], "ok") == 0) {
+		status = WPD_SYSTEM_STATUS_OK;
+	} else if (strcmp(argv[1], "fault") == 0) {
+		status = WPD_SYSTEM_STATUS_SENSOR_FAULT;
+	} else {
+		shell_error(sh, "estado invalido: %s (use ok|fault)", argv[1]);
+		return -EINVAL;
+	}
+
+	struct wpd_system_status_msg msg = { .status = status };
+	int rc = zbus_chan_pub(&chan_system_status, &msg, K_MSEC(100));
+
+	if (rc != 0) {
+		shell_error(sh, "falha ao publicar chan_system_status (rc=%d)", rc);
+		return rc;
+	}
+
+	shell_print(sh, "chan_system_status forcado para %s (so para diagnostico)",
+		    system_status_names[status]);
+	return 0;
+}
+
 SHELL_STATIC_SUBCMD_SET_CREATE(sub_wpd_config,
 	SHELL_CMD_ARG(show, NULL, "Mostra threshold/tolerance atuais", cmd_config_show, 1, 0),
 	SHELL_CMD_ARG(threshold, NULL, "<graus> - define o limiar de inclinacao",
@@ -238,6 +276,9 @@ SHELL_STATIC_SUBCMD_SET_CREATE(sub_wpd,
 	SHELL_CMD_ARG(force, NULL,
 		      "<good|bad|alerting> - forca chan_posture_state p/ diagnostico",
 		      cmd_force, 2, 0),
+	SHELL_CMD_ARG(force-status, NULL,
+		      "<ok|fault> - forca chan_system_status p/ diagnostico",
+		      cmd_force_status, 2, 0),
 	SHELL_SUBCMD_SET_END
 );
 
