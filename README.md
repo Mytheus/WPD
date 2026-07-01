@@ -178,6 +178,17 @@ ou, usando o wrapper:
 > `shell.c`, em vez de duplicar o número em dois arquivos. Build limpo de primeira.
 >
 > FLASH 3,94% (81 248 B de 2 064 128 B), RAM 5,71% (15 424 B de 264 KB).
+>
+> **Build validado (2026-07-01) — Etapa 9**: `settings_module` observa `chan_config`
+> e persiste threshold/tolerance na NVS a cada mudança — sem exigir um comando `save`
+> explícito do Shell (que continua sem importar nada de Settings). Corrigi também um bug
+> real de robustez no smoke test de `main.c`: ele assumia o limiar default (15°) ao
+> montar a amostra sintética "ruim", o que teria passado a falhar sozinho em qualquer
+> boot subsequente a uma configuração persistida diferente do default — agora lê o
+> limiar atual de `chan_config` e usa uma margem fixa acima dele. Build limpo de
+> primeira (só o mesmo warning de comentário recorrente, já corrigido).
+>
+> FLASH 3,98% (82 104 B de 2 064 128 B), RAM 5,71% (15 448 B de 264 KB).
 
 ## Como testar (a partir da Etapa 11)
 
@@ -205,8 +216,8 @@ BOOTSEL).
 | 5 | Máquina de estados (posture_engine: filtro, histerese, ack) | ✅ |
 | 6 | Comunicação via ZBus entre módulos (smoke test de pipeline ponta a ponta) | ✅ |
 | 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ✅ |
-| 8 | Shell (`wpd config`/`status`/`force`) | ✅ Esta entrega |
-| 9 | Settings | ⏳ |
+| 8 | Shell (`wpd config`/`status`/`force`) | ✅ |
+| 9 | Settings (persistência automática de `chan_config` na NVS) | ✅ Esta entrega |
 | 10 | Logging | ⏳ |
 | 11 | Testes (Ztest + Twister) | ⏳ |
 | 12 | Refatoração | ⏳ |

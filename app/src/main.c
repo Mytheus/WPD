@@ -1,9 +1,12 @@
 /*
  * Objetivo: ponto de entrada do firmware.
  *
- * Nesta etapa (7 — atuador de vibração PWM, ADR 0001), `notification` passa a possuir
- * o `&pwm` (canal 15) que main() só reservava/verificava desde a Etapa 2 — mesma
- * devolução de posse já aplicada a `buttons`/`led0` na Etapa 4. Resta em main() apenas
+ * Nesta etapa (9 — settings), `settings_load()` passa a carregar `chan_config` de
+ * verdade a partir da NVS (handler da subárvore "wpd" em src/modules/settings) — antes
+ * disso era um no-op válido, sem nenhum handler registrado. main() continua sem saber que
+ * Settings existe: ele só chama `settings_subsys_init()`/`settings_load()`, e é o
+ * próprio módulo `settings` (via `SETTINGS_STATIC_HANDLER_DEFINE`) que se registra e
+ * publica em `chan_config` quando o carregamento termina. Resta em main() apenas
  * `i2c0`, ainda sem módulo dono (sensor não escolhido, ADR 0002).
  *
  * Responsabilidade: orquestração de boot; bring-up do que ainda não tem módulo dono
@@ -99,13 +102,28 @@ static bool publish_sample(int32_t angle_mdeg, enum wpd_posture_state *state_out
 static void posture_pipeline_smoke_test(void)
 {
 	enum wpd_posture_state state;
+	struct wpd_posture_config cfg;
 
-	/* 30 graus: acima do limiar default de 15 graus (chan_config) -> deve virar BAD
-	 * já na primeira amostra (o filtro em posture_engine inicializa direto no valor
-	 * da primeira leitura, sem suavizar).
+	/* A partir da Etapa 9, chan_config pode ter sido carregado da NVS com um valor
+	 * diferente do default (ex.: usuario configurou via `wpd config threshold` numa
+	 * sessao anterior) -- ler o limiar atual em vez de assumir o default evita este
+	 * smoke test falhar sozinho so porque a configuracao persistida mudou.
 	 */
-	if (!publish_sample(30000, &state) || state != WPD_POSTURE_BAD) {
-		LOG_ERR("pipeline: esperava BAD apos amostra de 30000 mdeg, obteve %d", state);
+	int rc = zbus_chan_read(&chan_config, &cfg, K_MSEC(100));
+
+	if (rc != 0) {
+		LOG_ERR("pipeline: falha ao ler chan_config (rc=%d)", rc);
+		return;
+	}
+
+	/* Margem de 15000 mdeg acima do limiar atual: garante que a amostra sintetica
+	 * excede o limiar sem depender do valor exato (default ou persistido).
+	 */
+	int32_t bad_angle_mdeg = cfg.threshold_mdeg + 15000;
+
+	if (!publish_sample(bad_angle_mdeg, &state) || state != WPD_POSTURE_BAD) {
+		LOG_ERR("pipeline: esperava BAD apos amostra de %d mdeg (limiar=%d), obteve %d",
+			bad_angle_mdeg, cfg.threshold_mdeg, state);
 		return;
 	}
 
@@ -137,7 +155,7 @@ static void posture_pipeline_smoke_test(void)
 
 int main(void)
 {
-	LOG_INF("Wearable de Correcao de Postura - boot OK (Etapa 7: atuador PWM)");
+	LOG_INF("Wearable de Correcao de Postura - boot OK (Etapa 9: settings)");
 
 	check_device_ready(i2c0_dev, "i2c0");
 
@@ -148,7 +166,7 @@ int main(void)
 	} else {
 		rc = settings_load();
 		LOG_INF("settings: subsistema inicializado, settings_load rc=%d "
-			"(nenhum handler registrado ainda - Etapa 9)", rc);
+			"(handler wpd/* registrado - ver src/modules/settings)", rc);
 	}
 
 	zbus_smoke_test();

@@ -44,16 +44,19 @@ ZBUS_CHAN_DEFINE(chan_button_event,
 		  {0});
 
 /* Defaults (WPD_CONFIG_DEFAULT_*, include/wpd/config.h): placeholder ergonômico
- * razoável, não calibrado contra sensor real (ADR 0002). Settings (Etapa 9) sobrescreve
- * com valor persistido; Shell (Etapa 8, comando `wpd config reset`) usa o mesmo default.
- * Sem isso, {0} deixaria posture_engine (Etapa 5) alertando instantaneamente
+ * razoável, não calibrado contra sensor real (ADR 0002) -- usado só até `settings`
+ * (Etapa 9) carregar um valor persistido da NVS no boot (ou enquanto nada foi salvo
+ * ainda). Sem isso, {0} deixaria posture_engine (Etapa 5) alertando instantaneamente
  * (limiar=0, tolerância=0) antes de qualquer configuração real existir.
+ *
+ * `settings_config_lis` (Etapa 9) observa este canal só para persistir na NVS a cada
+ * mudança -- não decide nada com o valor, quem decide é `posture_engine`.
  */
 ZBUS_CHAN_DEFINE(chan_config,
 		  struct wpd_posture_config,
 		  NULL,
 		  NULL,
-		  ZBUS_OBSERVERS(posture_engine_config_lis),
+		  ZBUS_OBSERVERS(posture_engine_config_lis, settings_config_lis),
 		  ZBUS_MSG_INIT(.threshold_mdeg = WPD_CONFIG_DEFAULT_THRESHOLD_MDEG,
 				.tolerance_ms = WPD_CONFIG_DEFAULT_TOLERANCE_MS));
 

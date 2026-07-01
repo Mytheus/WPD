@@ -25,12 +25,10 @@ Interface de engenharia/depuração. Nunca contém lógica de negócio — apena
 comandos do operador em mensagens ZBus. Cada comando lê o canal sob demanda via
 `zbus_chan_read` no momento em que é digitado — não há listener/cache local.
 
-**Nota de escopo**: a Seção 9 da arquitetura ("Fluxo de configuração") diz que Shell
-aciona Settings, que persiste em NVS. Settings (Etapa 9) ainda não existe, então
-`threshold`/`tolerance`/`reset` só atualizam `chan_config` em RAM por enquanto —
-`posture_engine` já reage imediatamente, mas o valor não sobrevive a um reboot. Não há
-comando `save` nesta etapa porque, sem um `settings_module` real, ele não faria nada
-além do que "já está aplicado em RAM".
+**Nota de escopo (atualizada na Etapa 9)**: `threshold`/`tolerance`/`reset` já persistem
+automaticamente — `settings_module` (Etapa 9) observa `chan_config` e salva na NVS a
+cada mudança, sem este arquivo precisar saber que Settings existe. Por isso não há (e
+não é mais necessário) um comando `save`.
 
 ## Dependências
 
@@ -54,5 +52,4 @@ Terminal serial na UART0 (115200 8N1): `wpd config show`, `wpd config threshold 
 
 ## Possíveis evoluções
 
-`wpd config save` quando `settings_module` existir (Etapa 9); comandos de introspecção
-de Twister/coverage embutidos para diagnóstico em campo.
+Comandos de introspecção de Twister/coverage embutidos para diagnóstico em campo.

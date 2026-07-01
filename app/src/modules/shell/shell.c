@@ -16,12 +16,12 @@
  *                                       passar por posture_engine (só para diagnóstico
  *                                       de notification/LED/PWM sem sensor real).
  *
- * Nota de escopo (Diagrama Extra "Estrutura do Projeto", Seção 9 — "Fluxo de
- * configuração"): a arquitetura diz que Shell aciona Settings, que persiste em NVS.
- * Settings (Etapa 9) ainda não existe — `wpd config threshold/tolerance/reset` só
- * atualizam `chan_config` em RAM por enquanto (`posture_engine` já reage
- * imediatamente); não há comando `save` nesta etapa porque não haveria o que ele
- * fizesse de diferente de "já está aplicado em RAM" sem um settings_module real.
+ * Nota de escopo (atualizada na Etapa 9): a Seção 9 da arquitetura diz que Shell aciona
+ * Settings, que persiste em NVS. Em vez de um comando explícito `save`, `settings`
+ * (Etapa 9) observa `chan_config` diretamente e persiste toda vez que o canal muda —
+ * então `wpd config threshold/tolerance/reset` já ficam salvos automaticamente, sem
+ * este módulo precisar saber que Settings existe (nunca importou seu header, e continua
+ * não importando).
  *
  * Dependências: subsistema Shell do Zephyr (CONFIG_SHELL=y, Etapa 2);
  * src/zbus/zbus_channels.h (canais `chan_config`, `chan_posture_state`).
@@ -118,8 +118,7 @@ static int cmd_config_threshold(const struct shell *sh, size_t argc, char **argv
 	cfg.threshold_mdeg = (int32_t)deg * 1000;
 	rc = publish_config(sh, &cfg);
 	if (rc == 0) {
-		shell_print(sh, "threshold atualizado para %ld graus (RAM apenas - "
-				"persistencia via Settings e a Etapa 9)", deg);
+		shell_print(sh, "threshold atualizado para %ld graus (persistido em NVS)", deg);
 	}
 	return rc;
 }
@@ -146,8 +145,7 @@ static int cmd_config_tolerance(const struct shell *sh, size_t argc, char **argv
 	cfg.tolerance_ms = (uint32_t)sec * 1000U;
 	rc = publish_config(sh, &cfg);
 	if (rc == 0) {
-		shell_print(sh, "tolerance atualizada para %lu s (RAM apenas - "
-				"persistencia via Settings e a Etapa 9)", sec);
+		shell_print(sh, "tolerance atualizada para %lu s (persistido em NVS)", sec);
 	}
 	return rc;
 }

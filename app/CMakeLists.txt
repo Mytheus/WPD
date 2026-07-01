@@ -13,9 +13,8 @@
 # Como testar: west build -b rpi_pico app && west build -t menuconfig (inspecionar
 # símbolos resolvidos).
 #
-# Possíveis evoluções: o módulo ainda não criado (settings — Etapa 9) ganhará seu
-# próprio `add_subdirectory(src/modules/...)` quando implementado. Nunca adicionar um
-# subdiretório aqui antes de a etapa correspondente estar concluída.
+# Possíveis evoluções: nenhum módulo pendente de add_subdirectory — todos os previstos
+# em docs/ARCHITECTURE.md (Seção 6) existem a partir da Etapa 9.
 
 cmake_minimum_required(VERSION 3.20.0)
 
@@ -27,6 +26,7 @@ add_subdirectory(src/modules/button)
 add_subdirectory(src/modules/notification)
 add_subdirectory(src/modules/posture_engine)
 add_subdirectory(src/modules/shell)
+add_subdirectory(src/modules/settings)
 
 target_sources(app PRIVATE src/main.c)
 
