@@ -139,6 +139,15 @@ ou, usando o wrapper:
 > devolveu a posse de `buttons`/`led0` para os módulos correspondentes.
 >
 > FLASH 3,74% (77 224 B de 2 064 128 B), RAM 5,67% (15 328 B de 264 KB).
+>
+> **Build validado (2026-06-30) — Etapa 5**: `posture_engine` ganhou a máquina de
+> estados real (filtro + histerese via `k_timer`/`k_work` + `k_mutex`). Ajustei o valor
+> inicial de `chan_config` de `{0}` para um placeholder ergonômico (limiar 15°, tolerância
+> 30s) — com zeros, o módulo alertaria instantaneamente antes de qualquer configuração
+> real existir (Settings/Shell só chegam nas Etapas 8/9). Nenhum bug de build desta vez,
+> só um warning de comentário (`/*` dentro de comentário, mesmo padrão da Etapa 3).
+>
+> FLASH 3,79% (78 168 B de 2 064 128 B), RAM 5,71% (15 424 B de 264 KB).
 
 ## Como testar (a partir da Etapa 11)
 
@@ -162,9 +171,9 @@ BOOTSEL).
 | 1 | Árvore do projeto | ✅ |
 | 2 | Infraestrutura (Logging, Shell, Settings, GPIO, Threads, Timers, Workqueues) | ✅ |
 | 3 | Canais ZBus | ✅ |
-| 4 | Módulos (`button`, `notification`/LED, `posture_engine` esqueleto) | ✅ Esta entrega |
-| 5 | Máquina de estados (posture_engine: ângulo, filtro, histerese) | ⏳ |
-| 6 | Comunicação via ZBus entre módulos | ⏳ (parcialmente antecipada na Etapa 4) |
+| 4 | Módulos (`button`, `notification`/LED, `posture_engine` esqueleto) | ✅ |
+| 5 | Máquina de estados (posture_engine: filtro, histerese, ack) | ✅ Esta entrega |
+| 6 | Comunicação via ZBus entre módulos | ⏳ (parcialmente antecipada nas Etapas 4/5) |
 | 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ⏳ |
 | 8 | Shell | ⏳ |
 | 9 | Settings | ⏳ |

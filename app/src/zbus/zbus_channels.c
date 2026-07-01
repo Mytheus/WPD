@@ -43,12 +43,18 @@ ZBUS_CHAN_DEFINE(chan_button_event,
 		  ZBUS_OBSERVERS(posture_engine_button_lis),
 		  {0});
 
+/* Default de 15 graus / 30s: placeholder ergonômico razoável, não calibrado contra
+ * sensor real (ADR 0002). Settings (Etapa 9) sobrescreve com valor persistido; Shell
+ * (Etapa 8) permite ajuste manual. Sem este default, {0} deixaria posture_engine (Etapa
+ * 5) alertando instantaneamente (limiar=0, tolerância=0) antes de qualquer configuração
+ * real existir.
+ */
 ZBUS_CHAN_DEFINE(chan_config,
 		  struct wpd_posture_config,
 		  NULL,
 		  NULL,
 		  ZBUS_OBSERVERS(posture_engine_config_lis),
-		  {0});
+		  ZBUS_MSG_INIT(.threshold_mdeg = 15000, .tolerance_ms = 30000));
 
 ZBUS_CHAN_DEFINE(chan_system_status,
 		  struct wpd_system_status_msg,

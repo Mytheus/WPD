@@ -30,10 +30,12 @@ LED/PWM não bloqueia, conforme Diagrama Extra "Arquitetura ZBus").
 
 ## Como testar
 
-Hoje: publicar manualmente em `chan_posture_state` (ainda sem produtor real —
-`posture_engine` só publica a partir da Etapa 5) e observar `led0`. Ztest com
-fake/emulated GPIO+PWM em `tests/notification/` (Etapa 11); validação manual em hardware
-via comando Shell de "forçar evento" (Etapa 8).
+Hoje: `posture_engine` (Etapa 5) já publica `chan_posture_state` de verdade nas
+transições — mas só reage a amostras de `chan_sensor_data`, que ainda não tem produtor
+real (sem sensor escolhido, ADR 0002). Até lá, publicar manualmente em
+`chan_posture_state` para observar `led0`. Ztest com fake/emulated GPIO+PWM em
+`tests/notification/` (Etapa 11); validação manual em hardware via comando Shell de
+"forçar evento" (Etapa 8).
 
 ## Possíveis evoluções
 
