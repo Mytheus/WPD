@@ -159,6 +159,15 @@ ou, usando o wrapper:
 > não um bug). Sem erros; build limpo de primeira.
 >
 > FLASH 3,81% (78 736 B de 2 064 128 B), RAM 5,71% (15 424 B de 264 KB).
+>
+> **Build validado (2026-06-30) — Etapa 7**: `notification` passou a acionar o motor de
+> vibração via `&pwm` canal 15 (`pwm_set`, 1 kHz, duty 70% enquanto ALERTING) — o mesmo
+> canal reservado no overlay desde a Etapa 1, agora finalmente consumido. Escopo mínimo
+> de propósito: duty cycle fixo, sem padrão intermitente (não há motor real para
+> calibrar contra). `main.c` devolveu a posse de `pwm` para `notification`, restando só
+> `i2c0` sem módulo dono. Build limpo de primeira, sem warnings.
+>
+> FLASH 3,84% (79 164 B de 2 064 128 B), RAM 5,71% (15 424 B de 264 KB).
 
 ## Como testar (a partir da Etapa 11)
 
@@ -184,8 +193,8 @@ BOOTSEL).
 | 3 | Canais ZBus | ✅ |
 | 4 | Módulos (`button`, `notification`/LED, `posture_engine` esqueleto) | ✅ |
 | 5 | Máquina de estados (posture_engine: filtro, histerese, ack) | ✅ |
-| 6 | Comunicação via ZBus entre módulos (smoke test de pipeline ponta a ponta) | ✅ Esta entrega |
-| 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ⏳ |
+| 6 | Comunicação via ZBus entre módulos (smoke test de pipeline ponta a ponta) | ✅ |
+| 7 | Atuador de vibração (PWM) — *redefinida, ver ADR 0001* | ✅ Esta entrega |
 | 8 | Shell | ⏳ |
 | 9 | Settings | ⏳ |
 | 10 | Logging | ⏳ |

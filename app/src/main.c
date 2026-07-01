@@ -1,20 +1,13 @@
 /*
  * Objetivo: ponto de entrada do firmware.
  *
- * Nesta etapa (6 — comunicação via ZBus entre módulos), main() adiciona um smoke test
- * de integração de ponta a ponta: publica uma amostra sintética "ruim" em
- * `chan_sensor_data` (não há sensor real ainda — ADR 0002) e confirma, lendo
- * `chan_posture_state`, que a cadeia completa reagiu: `posture_engine` filtrou/decidiu
- * GOOD->BAD e `notification` (listener síncrono, já executado quando `zbus_chan_pub`
- * retorna) acionou o LED. Em seguida publica uma amostra "boa" para voltar a GOOD e
- * cancelar o timer de histerese armado pela amostra sintética — sem isso, o sistema
- * "alertaria" sozinho ~30s após o boot por causa do próprio teste, o que seria um efeito
- * colateral confuso para quem for validar o hardware depois. Isso ainda é só prova de
- * mecanismo (Diagrama 3: "main() não contém lógica de negócio") — não é uma decisão de
- * postura de verdade.
+ * Nesta etapa (7 — atuador de vibração PWM, ADR 0001), `notification` passa a possuir
+ * o `&pwm` (canal 15) que main() só reservava/verificava desde a Etapa 2 — mesma
+ * devolução de posse já aplicada a `buttons`/`led0` na Etapa 4. Resta em main() apenas
+ * `i2c0`, ainda sem módulo dono (sensor não escolhido, ADR 0002).
  *
  * Responsabilidade: orquestração de boot; bring-up do que ainda não tem módulo dono
- * (`i2c0`, `pwm`); smoke test de integração entre os módulos já existentes.
+ * (`i2c0`); smoke test de integração entre os módulos já existentes (Etapa 6).
  * Dependências: Logging, Settings (zephyr/settings/settings.h), Device Model
  * (zephyr/device.h), ZBus (src/zbus/zbus_channels.h).
  * Quem chama: o kernel Zephyr, após a inicialização dos drivers via SYS_INIT.
@@ -22,14 +15,14 @@
  *
  * Como testar: west build -b rpi_pico app && flashar via UF2/picotool; abrir um
  * terminal serial na UART0 (115200 8N1) e confirmar, na ordem: mensagem de boot, status
- * "ready" de i2c0/pwm, resultado do settings_load(), smoke test de `chan_system_status`
- * e o smoke test de pipeline (deve terminar em GOOD, sem erro). Pressionar o botão
+ * "ready" de i2c0, resultado do settings_load(), smoke test de `chan_system_status`
+ * e o smoke test de pipeline (deve terminar em GOOD, sem erro, e acionar
+ * brevemente LED+motor de vibração durante o estado BAD sintético). Pressionar o botão
  * físico deve gerar log do módulo `button` seguido do módulo `posture_engine`.
  *
- * Possíveis evoluções: quando o driver do IMU existir (ADR 0002) e o atuador PWM for
- * implementado (Etapa 7), os checks de `i2c0`/`pwm` também migram para seus módulos; o
- * smoke test de pipeline sintético pode ser removido nessa hora (ou mantido como
- * self-test de boot, a decidir).
+ * Possíveis evoluções: quando o driver do IMU existir (ADR 0002), o check de `i2c0`
+ * também migra para o futuro sensor_driver e main() fica só com Settings + os smoke
+ * tests de ZBus.
  */
 
 #include <stdbool.h>
@@ -45,7 +38,6 @@
 LOG_MODULE_REGISTER(main, CONFIG_LOG_DEFAULT_LEVEL);
 
 static const struct device *const i2c0_dev = DEVICE_DT_GET(DT_NODELABEL(i2c0));
-static const struct device *const pwm_dev = DEVICE_DT_GET(DT_NODELABEL(pwm));
 
 static void check_device_ready(const struct device *dev, const char *name)
 {
@@ -145,10 +137,9 @@ static void posture_pipeline_smoke_test(void)
 
 int main(void)
 {
-	LOG_INF("Wearable de Correcao de Postura - boot OK (Etapa 6: comunicacao zbus)");
+	LOG_INF("Wearable de Correcao de Postura - boot OK (Etapa 7: atuador PWM)");
 
 	check_device_ready(i2c0_dev, "i2c0");
-	check_device_ready(pwm_dev, "pwm");
 
 	int rc = settings_subsys_init();
 
