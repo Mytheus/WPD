@@ -21,27 +21,34 @@
  *   - Botão de ack/modo -> GP14
  *   - PWM do motor de vibração -> GP15 (slice 7, canal B)
  *
- * ATENÇÃO (não verificável neste momento): os nomes exatos das macros de pinmux abaixo
- * (I2C0_SDA_P4, I2C0_SCL_P5, PWM_B7_P15) seguem a convenção observada em
- * <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>, mas não há toolchain/West
- * instalado neste ambiente para compilar e confirmar contra a árvore Zephyr real. Ao
- * rodar o primeiro `west build`, se o compilador reclamar de macro desconhecida, abra
- * esse header (dentro de zephyr/dts/bindings/pinctrl ou
- * zephyr/include/zephyr/dt-bindings/pinctrl/ no seu workspace West) e corrija os nomes
- * aqui — é a única correção esperada nesta etapa.
+ * Macros de pinmux confirmadas contra
+ * zephyr/include/zephyr/dt-bindings/pinctrl/rpi-pico-pinctrl-common.h (workspace real):
+ * I2C0_SDA_P4, I2C0_SCL_P5, PWM_7B_P15 (não "PWM_B7_P15" — nome corrigido após o
+ * primeiro `west build`, que falhou com "expected number or parenthesized expression"
+ * na linha do pinmux do PWM).
+ *
+ * Etapa 2 (infraestrutura): o binding "gpio-keys" é consumido pelo subsistema de Input
+ * do Zephyr (drivers/input/input_gpio_keys.c, CONFIG_INPUT + CONFIG_INPUT_GPIO_KEYS), não
+ * por leitura direta de GPIO. Esse driver exige a propriedade `zephyr,code` em cada botão
+ * (DT_PROP sem fallback) — ausente na Etapa 1 porque CONFIG_INPUT estava desligado e o
+ * driver nunca era compilado contra este overlay. Adicionada agora que CONFIG_INPUT=y.
+ * O código semântico real (ack/reset/modo) só é interpretado em software na Etapa 4
+ * (button_module) — aqui é só o requisito mínimo do binding de hardware.
  */
 
 #include <zephyr/dt-bindings/gpio/gpio.h>
 #include <zephyr/dt-bindings/i2c/i2c.h>
 #include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>
+#include <zephyr/dt-bindings/input/input-event-codes.h>
 
 / {
-	buttons {
+	buttons: buttons {
 		compatible = "gpio-keys";
 
 		ack_button: button_0 {
 			gpios = <&gpio0 14 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
 			label = "Ack/Mode button (placeholder: GP14)";
+			zephyr,code = <INPUT_KEY_0>;
 		};
 	};
 
@@ -64,7 +71,7 @@
 
 	pwm7_wpd_default: pwm7_wpd_default {
 		group1 {
-			pinmux = <PWM_B7_P15>;
+			pinmux = <PWM_7B_P15>;
 		};
 	};
 };
@@ -79,7 +86,12 @@
 	 */
 };
 
-&pwm7 {
+/* RP2040 tem um único controlador PWM (`pwm`, label do SoC) multiplexando 8 slices x 2
+ * canais (A/B) — não há node "pwm7" por slice. O canal é selecionado em tempo de uso via
+ * pwm-cells: <&pwm CHANNEL PERIOD FLAGS>, com CHANNEL = slice*2 + (0=A, 1=B).
+ * GP15 = slice 7 canal B (PWM_7B_P15) -> CHANNEL = 7*2+1 = 15.
+ */
+&pwm {
 	status = "okay";
 	pinctrl-0 = <&pwm7_wpd_default>;
 	pinctrl-names = "default";
@@ -87,4 +99,25 @@
 	 * pela Sensor/PWM API dentro do notification_module (Etapa 7 redefinida, ADR 0001),
 	 * não por um node de devicetree genérico tipo "pwm-leds".
 	 */
+};
+
+/* Etapa 2 (infraestrutura): partição de flash dedicada ao backend NVS do subsistema
+ * Settings (RF07/RNF05). O board rpi_pico não define uma "storage_partition" própria —
+ * o flash inteiro após o bootloader é um único `code_partition` read-only. Reservamos os
+ * últimos 32 KiB (8 setores de 4 KiB, o erase-block-size do driver flash_rpi_pico) para
+ * NVS, encolhendo `code_partition` na mesma medida. A aplicação atual (~26 KiB) fica
+ * folgada dentro do novo tamanho de `code_partition` (~2 MiB - 32 KiB).
+ */
+&code_partition {
+	reg = <0x100 (DT_SIZE_M(2) - 0x100 - DT_SIZE_K(32))>;
+};
+
+&flash0 {
+	partitions {
+		storage_partition: partition@1f8000 {
+			compatible = "zephyr,mapped-partition";
+			label = "storage-partition";
+			reg = <0x1f8000 DT_SIZE_K(32)>;
+		};
+	};
 };

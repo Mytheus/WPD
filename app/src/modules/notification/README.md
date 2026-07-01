@@ -19,7 +19,7 @@ apenas traduz estado em estímulo.
 
 - `src/zbus/zbus_channels.h` (canal `chan_posture_state`).
 - Devicetree: GPIO do LED (`led0`, alias padrão do board) e PWM do motor de vibração
-  (`&pwm7`, ver `app/boards/rpi_pico.overlay`).
+  (controlador `&pwm`, canal 15 = slice 7B / GP15, ver `app/boards/rpi_pico.overlay`).
 
 ## Quem consome
 
