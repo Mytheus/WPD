@@ -135,10 +135,10 @@ Esta decomposição segue o princípio de **information hiding** do livro: cada 
 | Canal (zbus channel) | Payload | Publishers | Subscribers |
 |---|---|---|---|
 | `chan_sensor_data` | amostra bruta/filtrada (ax, ay, az, ângulo) | `sensor_thread` | `posture_engine` |
-| `chan_posture_state` | enum {GOOD, BAD, ALERTING} + timestamp | `posture_engine` | `notification_module`, `ble_module`, `logging listener` |
+| `chan_posture_state` | enum {GOOD, BAD, ALERTING} + timestamp | `posture_engine` | `notification_module`, `logging listener` |
 | `chan_button_event` | enum {SHORT_PRESS, LONG_PRESS} | `button_module` (via workqueue) | `posture_engine` (ack), `shell_module` |
 | `chan_config` | struct de configuração (limiar, tempo tolerância) | `settings_module`, `shell_module` | `posture_engine` |
-| `chan_system_status` | enum {OK, SENSOR_FAULT, BLE_FAULT} | qualquer módulo | `logging listener`, `ble_module` |
+| `chan_system_status` | enum {OK, SENSOR_FAULT} | qualquer módulo | `logging listener` |
 
 Cada canal é definido com `ZBUS_CHAN_DEFINE`, com **listeners** para reações imediatas (ex.: LED) e **subscribers** com fila própria para processamento assíncrono (ex.: BLE, que pode bloquear por I/O de rádio).
 
@@ -929,3 +929,25 @@ A próxima etapa natural, fora do escopo deste documento, é a tradução desta 
 3. Headers de canais ZBus (`zbus_channels.h`).
 4. Esqueleto dos módulos (`modules/*`) com `LOG_MODULE_REGISTER` e Kconfig próprios.
 5. Primeiros testes Ztest da máquina de estados de postura, isolados de hardware.
+
+---
+
+# Adendo de Implementação (2026-06-30)
+
+O hardware real disponível para a implementação (Etapa 1 em diante) é um **Raspberry Pi
+Pico (RP2040) padrão**, sem rádio integrado, mais um **motor de vibração** acionado por
+PWM. Duas decisões da Parte 1/2 deste documento foram revisadas com justificativa técnica
+formal, registrada como Architecture Decision Records:
+
+- **[ADR 0001](adr/0001-remove-ble-standalone-device.md)** — remoção de BLE/Wi-Fi/USB; o
+  `ble_module` é eliminado, o dispositivo passa a ser standalone (LED + motor de
+  vibração + Shell/UART), e a antiga Etapa 7 ("Implementar Bluetooth") é redefinida como
+  "Implementar o atuador de vibração (PWM)".
+- **[ADR 0002](adr/0002-custom-i2c-imu-driver.md)** — o driver do IMU será escrito à mão
+  (out-of-tree, em `drivers/sensor/`), em vez de reaproveitar um driver de fabricante
+  pronto, pois o modelo de sensor ainda não foi escolhido e há interesse explícito em
+  controle total da implementação I2C. A Sensor API do Zephyr continua sendo o contrato
+  entre o driver e `posture_engine` — nenhum módulo de negócio importa headers de driver.
+
+Todas as demais seções, diagramas, canais ZBus, threads e fluxos deste documento
+permanecem válidos e são a fonte da verdade para a implementação.

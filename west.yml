@@ -1,0 +1,46 @@
+# Manifesto West deste repositório (topologia T2 — "Star", aplicação como manifest repo).
+#
+# Objetivo: este arquivo é o ponto de entrada do workspace West. Ele NÃO contém o Zephyr
+# em si — apenas referencia onde buscá-lo e quais módulos HAL são necessários para a
+# placa de destino (Raspberry Pi Pico / RP2040).
+#
+# Responsabilidade: declarar a revisão fixa do Zephyr usada pelo projeto e restringir,
+# via name-allowlist, os módulos importados do manifesto upstream do Zephyr ao mínimo
+# necessário para o RP2040 — evitando baixar HALs de outros vendors (Nordic, STM32,
+# Espressif etc.) que este projeto não usa.
+#
+# Dependências: nenhuma (é o arquivo raiz do workspace).
+# Quem utiliza: comando `west init -l .` (a partir desta pasta) e `west update`.
+#
+# Como testar:
+#   1. west init -l .          # registra este repo como manifest repo do workspace
+#   2. west update             # clona zephyr + módulos listados no allowlist
+#   3. west list                # confirma que apenas zephyr, hal_rpi_pico e cmsis aparecem
+#
+# Possíveis evoluções:
+#   - Adicionar mais entradas ao name-allowlist se `west build` reclamar de módulo
+#     ausente (use scripts/find_modules.sh para descobrir o nome exato a adicionar).
+#   - Trocar `revision` para uma tag mais nova do Zephyr quando o projeto for atualizado
+#     (ex.: v4.2.0), revalidando a compilação antes de promover a mudança.
+
+manifest:
+  version: "0.13"
+
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: v4.1.0
+      import:
+        name-allowlist:
+          - cmsis          # Headers de núcleo ARM Cortex-M0+ (RP2040), exigidos pelo SoC.
+          - hal_rpi_pico   # Wrapper do pico-sdk: clocks, PIO, reset, exigido pelo board rpi_pico.
+
+# `self.path` é omitido de propósito: ao usar `west init -l .` a partir deste repositório,
+# o West infere automaticamente sua localização real relativa ao topdir do workspace.
+# Declarar um `self.path` que não corresponda ao nome real desta pasta (ex.: "app", quando
+# a aplicação Zephyr vive em ./app dentro deste MESMO repositório) faria o `west init`
+# falhar com erro de manifesto inconsistente.

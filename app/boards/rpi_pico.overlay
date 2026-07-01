@@ -1,0 +1,90 @@
+/*
+ * Overlay de devicetree para Raspberry Pi Pico (RP2040) — Wearable de Correção de Postura.
+ *
+ * Objetivo: reservar, no nível de hardware, os periféricos previstos em
+ * docs/ARCHITECTURE.md (Seção 7 "Identificação dos Periféricos") que ainda não têm
+ * driver/consumidor concreto:
+ *   - i2c0: barramento do futuro IMU (sensor ainda não escolhido — ver ADR 0002).
+ *   - botão de ack/modo (gpio-keys).
+ *   - canal PWM do motor de vibração.
+ *
+ * Responsabilidade: única fonte de verdade sobre pinagem física desta placa.
+ * Dependências: dt-bindings de GPIO, I2C e pinctrl do RP2040 (fornecidos pelo módulo
+ * hal_rpi_pico, importado via west.yml).
+ * Quem utiliza: drivers/sensor/* (Etapa 4), app/src/modules/button (Etapa 4),
+ *               app/src/modules/notification (Etapa 7 redefinida — ver ADR 0001).
+ *
+ * PLACEHOLDERS DE PINAGEM (combinados com o usuário na Etapa 1, ajustáveis em 1 linha
+ * quando a fiação física definitiva for confirmada — nenhum módulo de software depende
+ * do número do pino, apenas do alias/label):
+ *   - I2C0 SDA/SCL -> GP4 / GP5
+ *   - Botão de ack/modo -> GP14
+ *   - PWM do motor de vibração -> GP15 (slice 7, canal B)
+ *
+ * ATENÇÃO (não verificável neste momento): os nomes exatos das macros de pinmux abaixo
+ * (I2C0_SDA_P4, I2C0_SCL_P5, PWM_B7_P15) seguem a convenção observada em
+ * <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>, mas não há toolchain/West
+ * instalado neste ambiente para compilar e confirmar contra a árvore Zephyr real. Ao
+ * rodar o primeiro `west build`, se o compilador reclamar de macro desconhecida, abra
+ * esse header (dentro de zephyr/dts/bindings/pinctrl ou
+ * zephyr/include/zephyr/dt-bindings/pinctrl/ no seu workspace West) e corrija os nomes
+ * aqui — é a única correção esperada nesta etapa.
+ */
+
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/i2c/i2c.h>
+#include <zephyr/dt-bindings/pinctrl/rpi-pico-rp2040-pinctrl.h>
+
+/ {
+	buttons {
+		compatible = "gpio-keys";
+
+		ack_button: button_0 {
+			gpios = <&gpio0 14 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+			label = "Ack/Mode button (placeholder: GP14)";
+		};
+	};
+
+	aliases {
+		ack-button = &ack_button;
+	};
+};
+
+&pinctrl {
+	/* Estados de pinctrl próprios da aplicação — isolados dos defaults do board file
+	 * para não colidir com nomes que o board já possa definir.
+	 */
+	i2c0_wpd_default: i2c0_wpd_default {
+		group1 {
+			pinmux = <I2C0_SDA_P4>, <I2C0_SCL_P5>;
+			input-enable;
+			input-schmitt-enable;
+		};
+	};
+
+	pwm7_wpd_default: pwm7_wpd_default {
+		group1 {
+			pinmux = <PWM_B7_P15>;
+		};
+	};
+};
+
+&i2c0 {
+	status = "okay";
+	pinctrl-0 = <&i2c0_wpd_default>;
+	pinctrl-names = "default";
+	clock-frequency = <I2C_BITRATE_STANDARD>;
+	/* Nenhum nó de sensor concreto ainda: o modelo do IMU não foi escolhido (ADR 0002).
+	 * Adicionado quando o driver out-of-tree for implementado (Etapa 4).
+	 */
+};
+
+&pwm7 {
+	status = "okay";
+	pinctrl-0 = <&pwm7_wpd_default>;
+	pinctrl-names = "default";
+	/* Nenhum binding de atuador ainda: o motor de vibração será consumido diretamente
+	 * pela Sensor/PWM API dentro do notification_module (Etapa 7 redefinida, ADR 0001),
+	 * não por um node de devicetree genérico tipo "pwm-leds".
+	 */
+};

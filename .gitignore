@@ -1,1 +1,6 @@
 .claude
+
+# Artefatos de build do West/Zephyr (gerados localmente, fora de controle de versão)
+build/
+build-*/
+*.uf2
