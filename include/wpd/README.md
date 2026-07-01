@@ -1,7 +1,7 @@
 # `include/wpd/` — Headers públicos compartilhados
 
-> Placeholder de diretório — populado incrementalmente a partir da **Etapa 3** (structs
-> de payload dos canais ZBus). Nenhum header nesta etapa.
+> Populado na **Etapa 3** com os tipos de payload dos canais ZBus (`src/zbus/`). Apenas
+> tipos/enums/structs — nenhuma lógica.
 
 ## Objetivo
 
@@ -10,9 +10,21 @@ importem headers privados uns dos outros (Information Hiding).
 
 ## Responsabilidade
 
-Apenas tipos/structs/enums compartilhados (ex.: `enum posture_state`,
-`struct posture_config`) — nunca lógica, nunca protótipo de função interna de um módulo
-específico.
+Apenas tipos/structs/enums compartilhados — nunca lógica, nunca protótipo de função
+interna de um módulo específico.
+
+## Headers
+
+| Header | Conteúdo | Canal ZBus correspondente |
+|---|---|---|
+| `sensor.h` | `struct wpd_sensor_sample` (ax, ay, az, ângulo em milligraus) | `chan_sensor_data` |
+| `posture.h` | `enum wpd_posture_state`, `struct wpd_posture_state_msg` | `chan_posture_state` |
+| `button.h` | `enum wpd_button_event`, `struct wpd_button_event_msg` | `chan_button_event` |
+| `config.h` | `struct wpd_posture_config` (limiar + tempo de tolerância) | `chan_config` |
+| `system_status.h` | `enum wpd_system_status`, `struct wpd_system_status_msg` | `chan_system_status` |
+
+Nenhum `float`/`double` de propósito: o RP2040 (Cortex-M0+) não tem FPU em hardware;
+ângulos usam ponto fixo (milligraus, `int32_t`).
 
 ## Convenção
 
@@ -21,15 +33,15 @@ include path da aplicação em `app/CMakeLists.txt`).
 
 ## Dependências
 
-Nenhuma além de tipos primitivos C / Zephyr (`zephyr/kernel.h` quando necessário para
-`k_timepoint_t` etc.).
+`stdint.h` apenas.
 
 ## Como testar
 
-Não aplicável diretamente — validado indiretamente pelos testes dos módulos que os
-incluem.
+Não aplicável diretamente — validado indiretamente pelo smoke test de ZBus em
+`src/main.c` e, futuramente, pelos testes dos módulos que os incluem.
 
 ## Possíveis evoluções
 
 Se o projeto crescer, dividir em subpastas por domínio (ex.: `include/wpd/posture/`,
-`include/wpd/config/`).
+`include/wpd/config/`). `sensor.h` pode precisar de revisão quando o sensor real for
+escolhido (ADR 0002) se a resolução/eixos não corresponderem a `int16_t` x3.

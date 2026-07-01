@@ -43,9 +43,9 @@ WPD/
 │   └── src/
 │       ├── main.c
 │       ├── modules/           # posture_engine, notification, settings, shell, button, app_main
-│       └── zbus/               # zbus_channels.h/.c (canais centralizados, Etapa 3)
+│       └── zbus/               # zbus_channels.h/.c (canais centralizados, implementado na Etapa 3)
 ├── drivers/sensor/            # Driver I2C do IMU, out-of-tree (Etapa 4, ADR 0002)
-├── include/wpd/               # Headers públicos compartilhados entre módulos
+├── include/wpd/               # Headers públicos compartilhados (structs de payload dos canais ZBus, Etapa 3)
 ├── tests/                     # Ztest + testcase.yaml para Twister (Etapa 11)
 └── scripts/                   # Helpers de build/CI
 ```
@@ -117,6 +117,18 @@ ou, usando o wrapper:
 >
 > FLASH 3,64% (75 128 B de 2 064 128 B — já refletindo os 32 KiB reservados para
 > `storage_partition`), RAM 5,59% (15 104 B de 264 KB).
+>
+> **Build validado (2026-06-30) — Etapa 3**: dois bugs de build (não de arquitetura)
+> corrigidos em `app/src/zbus/`:
+> - `zephyr_library()` não é válido no modo "aplicação Zephyr" (só dentro de um módulo de
+>   fato) — `src/zbus/CMakeLists.txt` usa `target_sources(app PRIVATE zbus_channels.c)`,
+>   que herda os include paths já configurados em `app/CMakeLists.txt`.
+> - a macro `ZBUS_INIT` citada em um comentário do próprio `zbus.h` não existe como API
+>   pública — o valor inicial de `ZBUS_CHAN_DEFINE` é um inicializador C comum (`{0}`) ou
+>   `ZBUS_MSG_INIT(.campo = valor)`, confirmado contra
+>   `zephyr/samples/subsys/zbus/hello_world/`.
+>
+> FLASH 3,71% (76 552 B de 2 064 128 B), RAM 5,65% (15 272 B de 264 KB).
 
 ## Como testar (a partir da Etapa 11)
 
@@ -138,8 +150,8 @@ BOOTSEL).
 | Etapa | Descrição | Status |
 |---|---|---|
 | 1 | Árvore do projeto | ✅ |
-| 2 | Infraestrutura (Logging, Shell, Settings, GPIO, Threads, Timers, Workqueues) | ✅ Esta entrega |
-| 3 | Canais ZBus | ⏳ |
+| 2 | Infraestrutura (Logging, Shell, Settings, GPIO, Threads, Timers, Workqueues) | ✅ |
+| 3 | Canais ZBus | ✅ Esta entrega |
 | 4 | Módulos | ⏳ |
 | 5 | Máquina de estados | ⏳ |
 | 6 | Comunicação via ZBus entre módulos | ⏳ |
